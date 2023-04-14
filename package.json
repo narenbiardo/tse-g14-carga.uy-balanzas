@@ -1,0 +1,19 @@
+{
+	"name": "balanzas",
+	"version": "1.0.0",
+	"description": "Nodo periférico de Carga.uy",
+	"main": "index.js",
+	"scripts": {
+		"start": "node index.js",
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://gitlab.fing.edu.uy/javaee2023Grupo14/nodosPerifericos/balanzas"
+	},
+	"author": "https://github.com/narenbiardo",
+	"license": "ISC",
+	"dependencies": {
+		"express": "^4.18.2"
+	}
+}
