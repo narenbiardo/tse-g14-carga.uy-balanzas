@@ -1,19 +1,14 @@
 const express = require("express");
 const app = express();
 const port = 3001;
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
 
 const checkMatricula = require("./src/checkMatricula.js");
 
-// Secret key for signing JWTs
-const secretKey = "mySecretKey";
-
-// Registered users mocked
-var users = [
+// Mocked tokens
+var tokens = [
 	{
-		username: "cargauy",
-		password: "pass1234",
+		token: "tokencargauy",
+		description: "Token for an admin of carga.uy",
 	},
 ];
 
@@ -22,17 +17,17 @@ var balanzas = [
 	{
 		id: 1,
 		direccion: "KM 100",
-		usuario: "cargauy",
+		createdBy: "tokencargauy",
 	},
 	{
 		id: 2,
 		direccion: "KM 200",
-		usuario: "cargauy",
+		createdBy: "tokencargauy",
 	},
 	{
 		id: 3,
 		direccion: "KM 300",
-		usuario: "cargauy",
+		createdBy: "tokencargauy",
 	},
 ];
 
@@ -40,74 +35,30 @@ var balanzas = [
 var pesajes = [
 	{
 		id: 1,
-		vehiculoId: 1,
+		vehiculoId: "ABC1234",
 		balanzaId: 1,
 		fecha: new Date(2023, 5, 1, 10, 30),
+		peso: 1000.5,
 	},
 	{
 		id: 2,
 		vehiculoId: 2,
 		balanzaId: 2,
 		fecha: new Date(2023, 5, 1, 11, 15),
+		peso: 1500.75,
 	},
 	{
 		id: 3,
-		vehiculoId: 1,
+		vehiculoId: "ABC1234",
 		balanzaId: 3,
 		fecha: new Date(2023, 5, 2, 14, 45),
+		peso: 800.25,
 	},
 ];
 
 app.use(express.json());
 
-// Login route
-app.post("/login", (req, res) => {
-	const { username, password } = req.body;
-
-	// Find the user in the registered users list
-	const user = users.find(user => user.username === username);
-	if (!user) {
-		return res.status(401).json({ message: "Invalid username or password" });
-	}
-
-	// Verify the password
-	/*
-	if (!bcrypt.compareSync(password, user.password)) {
-		return res.status(401).json({ message: "Invalid username or password" });
-	}
-	*/
-
-	if (password !== user.password) {
-		return res.status(401).json({ message: "Invalid username or password" });
-	}
-
-	// Generate a valid JWT token valid for 1 hour
-	const token = jwt.sign({ username }, secretKey, { expiresIn: "1h" });
-
-	// Return the token to the client
-	res.json({ token });
-});
-
-// Middleware to verify the JWT token for protected routes
-function authenticateToken(req, res, next) {
-	const authHeader = req.headers["authorization"];
-	const token = authHeader && authHeader.split(" ")[1];
-
-	if (!token) {
-		return res.status(401).json({ message: "Missing token" });
-	}
-
-	jwt.verify(token, secretKey, (err, user) => {
-		if (err) {
-			return res.status(403).json({ message: "Invalid token" });
-		}
-
-		req.user = user;
-		next();
-	});
-}
-
-app.get("/checkMatricula", authenticateToken, (req, res) => {
+app.get("/checkMatricula", (req, res) => {
 	if (checkMatricula.checkMatricula(req.query.matricula.toString()) == true) {
 		res.json({ verified: true, message: "The license plate is valid" });
 	} else {
@@ -119,8 +70,15 @@ app.get("/checkMatricula", authenticateToken, (req, res) => {
 });
 
 // Get pesajes for a specific vehicle between two dates
-app.get("/pesajesVehiculo", authenticateToken, (req, res) => {
+app.get("/pesajesVehiculo", (req, res) => {
 	const { vehiculoId, fechaInicio, fechaFin } = req.body;
+	const token = req.headers["token"];
+
+	// Check if the token exists
+	const foundToken = tokens.find(t => t.token === token);
+	if (!foundToken) {
+		return res.status(403).json({ message: "Invalid token" });
+	}
 
 	const parsedFechaInicio = new Date(fechaInicio);
 	const parsedFechaFin = new Date(fechaFin);
@@ -131,7 +89,7 @@ app.get("/pesajesVehiculo", authenticateToken, (req, res) => {
 
 	const filteredPesajes = pesajes.filter(pesaje => {
 		return (
-			pesaje.vehiculoId === parseInt(vehiculoId) &&
+			pesaje.vehiculoId === vehiculoId &&
 			pesaje.fecha >= parsedFechaInicio &&
 			pesaje.fecha <= parsedFechaFin
 		);
@@ -150,13 +108,46 @@ app.get("/pesajesVehiculo", authenticateToken, (req, res) => {
 	res.json(result);
 });
 
-app.get("/balanzas", authenticateToken, (req, res) => {
+app.get("/balanzas", (req, res) => {
+	const token = req.headers["token"];
+
+	// Check if the token exists
+	const foundToken = tokens.find(t => t.token === token);
+	if (!foundToken) {
+		return res.status(403).json({ message: "Invalid token" });
+	}
+
 	res.json(balanzas);
 });
 
-app.post("/balanza", authenticateToken, (req, res) => {
+app.get("/balanza/:id", (req, res) => {
+	const balanzaId = parseInt(req.params.id);
+	const token = req.headers["token"];
+
+	// Check if the token exists
+	const foundToken = tokens.find(t => t.token === token);
+	if (!foundToken) {
+		return res.status(403).json({ message: "Invalid token" });
+	}
+
+	const balanza = balanzas.find(balanza => balanza.id === balanzaId);
+	if (!balanza) {
+		return res.status(404).json({ message: "Balanza not found" });
+	}
+
+	res.json(balanza);
+});
+
+app.post("/balanza", (req, res) => {
+	const token = req.headers["token"];
+
+	// Check if the token exists
+	const foundToken = tokens.find(t => t.token === token);
+	if (!foundToken) {
+		return res.status(403).json({ message: "Invalid token" });
+	}
+
 	const { direccion } = req.body;
-	const { username } = req.user; // Obtener el usuario del JWT
 
 	// Generate a new id for the balanza
 	const newBalanzaId = balanzas.length + 1;
@@ -165,7 +156,7 @@ app.post("/balanza", authenticateToken, (req, res) => {
 	const newBalanza = {
 		id: newBalanzaId,
 		direccion,
-		usuario: username, // Asignar el usuario del JWT a la balanza
+		createdBy: foundToken.token, // Assign the token of the authenticated user
 	};
 
 	// Add the new balanza to the list
@@ -174,49 +165,63 @@ app.post("/balanza", authenticateToken, (req, res) => {
 	res.json(newBalanza);
 });
 
-app.put("/balanza/:id", authenticateToken, (req, res) => {
+app.put("/balanza/:id", (req, res) => {
 	const balanzaId = parseInt(req.params.id);
-	const balanza = balanzas.find(balanza => balanza.id === balanzaId);
+	const token = req.headers["token"];
 
-	// Verificar si la balanza existe
+	// Check if the token exists
+	const foundToken = tokens.find(t => t.token === token);
+	if (!foundToken) {
+		return res.status(403).json({ message: "Invalid token" });
+	}
+
+	const balanza = balanzas.find(balanza => balanza.id === balanzaId);
 	if (!balanza) {
 		return res.status(404).json({ message: "Balanza not found" });
 	}
 
-	// Verificar si el usuario actual es el creador de la balanza
-	if (req.user.username !== balanza.usuario) {
+	// Check if the user is the creator of the balanza
+	if (foundToken.token !== balanza.createdBy) {
 		return res.status(403).json({ message: "Access denied" });
 	}
 
-	// Actualizar la dirección de la balanza
+	// Update the balanza
 	balanza.direccion = req.body.direccion;
 
 	res.json({ message: "Balanza updated successfully", balanza });
 });
 
-app.delete("/balanzas/:id", authenticateToken, (req, res) => {
+app.delete("/balanza/:id", (req, res) => {
 	const balanzaId = parseInt(req.params.id);
-	const balanza = balanzas.find(balanza => balanza.id === balanzaId);
+	const token = req.headers["token"];
 
-	// Verificar si la balanza existe
-	if (!balanza) {
+	// Check if the token exists
+	const foundToken = tokens.find(t => t.token === token);
+	if (!foundToken) {
+		return res.status(403).json({ message: "Invalid token" });
+	}
+
+	const balanzaIndex = balanzas.findIndex(balanza => balanza.id === balanzaId);
+	if (balanzaIndex === -1) {
 		return res.status(404).json({ message: "Balanza not found" });
 	}
 
-	// Verificar si el usuario actual es el creador de la balanza
-	if (req.user.username !== balanza.usuario) {
+	const balanza = balanzas[balanzaIndex];
+
+	// Check if the user is the creator of the balanza
+	if (foundToken.token !== balanza.createdBy) {
 		return res.status(403).json({ message: "Access denied" });
 	}
 
-	// Eliminar el pesaje vinculado a la balanza (si existe)
-	pesajes.filter(pesaje => pesaje.balanzaId !== balanzaId);
+	// Remove the balanza from the list
+	balanzas.splice(balanzaIndex, 1);
 
-	// Eliminar la balanza
-	balanzas.splice(balanzas.indexOf(balanza), 1);
+	// Remove the pesaje associated with the balanza (if exists)
+	pesajes = pesajes.filter(pesaje => pesaje.balanzaId !== balanzaId);
 
 	res.json({ message: "Balanza deleted successfully" });
 });
 
 app.listen(port, () => {
-	console.log(`Example app listening on port ${port}`);
+	console.log(`Server running on port ${port}`);
 });
