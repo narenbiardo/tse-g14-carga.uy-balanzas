@@ -1,6 +1,8 @@
 const express = require("express");
 const app = express();
-const port = 3001;
+const https = require('https');
+const http = require('http');
+const fs = require('fs');
 
 const checkMatricula = require("./src/checkMatricula.js");
 
@@ -222,7 +224,11 @@ app.delete("/balanza/:id", (req, res) => {
 	res.json({ message: "Balanza deleted successfully" });
 });
 
-app.listen(port, () => {
-	console.log(`Server running on port ${port}`);
-});
+const options = {
+  key: fs.readFileSync('src/resources/ssl/client-key.pem'),
+  cert: fs.readFileSync('src/resources/ssl/client-cert.pem')
+}
+
+http.createServer(app).listen(8080);
+https.createServer(options, app).listen(443);
 // TEST
