@@ -1,11 +1,14 @@
 const express = require("express");
 const app = express();
-const https = require('https');
-const http = require('http');
-const fs = require('fs');
+const https = require("https");
+const http = require("http");
+const fs = require("fs");
 
+const tokens = require("./data/tokens.json");
+const balanzas = require("./data/balanzas.json");
 const checkMatricula = require("./src/checkMatricula.js");
 
+/*
 // Mocked tokens
 var tokens = [
 	{
@@ -32,6 +35,7 @@ var balanzas = [
 		createdBy: "tokencargauy",
 	},
 ];
+*/
 
 // Mocked pesajes
 var pesajes = [
@@ -44,7 +48,7 @@ var pesajes = [
 	},
 	{
 		id: 2,
-		vehiculoId: 2,
+		vehiculoId: "ABC1234",
 		balanzaId: 2,
 		fecha: new Date(2023, 5, 1, 11, 15),
 		peso: 1500.75,
@@ -97,6 +101,26 @@ app.get("/pesajesVehiculo", (req, res) => {
 		);
 	});
 
+	const randomNumber = Math.floor(Math.random() * 101); // Generates a random int between 0 and 100
+
+	// Generate random pesajes for the vehicle within the specified date range
+	for (let i = 0; i <= randomNumber; i++) {
+		const randomBalanzaId = Math.floor(Math.random() * balanzas.length) + 1;
+		const randomFecha = getRandomDate(parsedFechaInicio, parsedFechaFin);
+		const randomPeso = getRandomPeso();
+
+		const newPesaje = {
+			id: pesajes.length + 1,
+			vehiculoId: vehiculoId,
+			balanzaId: randomBalanzaId,
+			fecha: randomFecha,
+			peso: randomPeso,
+		};
+
+		pesajes.push(newPesaje);
+		filteredPesajes.push(newPesaje);
+	}
+
 	const result = filteredPesajes.map(pesaje => {
 		const balanza = balanzas.find(balanza => balanza.id === pesaje.balanzaId);
 		return {
@@ -109,6 +133,19 @@ app.get("/pesajesVehiculo", (req, res) => {
 
 	res.json(result);
 });
+
+// Helper function to generate a random date within a range
+function getRandomDate(startDate, endDate) {
+	const start = startDate.getTime();
+	const end = endDate.getTime();
+	const randomTimestamp = start + Math.random() * (end - start);
+	return new Date(randomTimestamp);
+}
+
+// Helper function to generate a random peso between 500 and 2000
+function getRandomPeso() {
+	return Math.random() * (2000 - 500) + 500;
+}
 
 app.get("/balanzas", (req, res) => {
 	const token = req.headers["token"];
@@ -164,6 +201,8 @@ app.post("/balanza", (req, res) => {
 	// Add the new balanza to the list
 	balanzas.push(newBalanza);
 
+	updateBalanzasFile(balanzas);
+
 	res.json(newBalanza);
 });
 
@@ -189,6 +228,8 @@ app.put("/balanza/:id", (req, res) => {
 
 	// Update the balanza
 	balanza.direccion = req.body.direccion;
+
+	updateBalanzasFile(balanzas);
 
 	res.json({ message: "Balanza updated successfully", balanza });
 });
@@ -221,13 +262,25 @@ app.delete("/balanza/:id", (req, res) => {
 	// Remove the pesaje associated with the balanza (if exists)
 	pesajes = pesajes.filter(pesaje => pesaje.balanzaId !== balanzaId);
 
+	updateBalanzasFile(balanzas);
+
 	res.json({ message: "Balanza deleted successfully" });
 });
 
-const options = {
-  key: fs.readFileSync('src/resources/ssl/client-key.pem'),
-  cert: fs.readFileSync('src/resources/ssl/client-cert.pem')
+function updateBalanzasFile(balanzas) {
+	fs.writeFile("./data/balanzas.json", JSON.stringify(balanzas), err => {
+		if (err) {
+			console.error("Error writing balanzas.json:", err);
+		} else {
+			console.log("balanzas.json updated successfully");
+		}
+	});
 }
+
+const options = {
+	key: fs.readFileSync("src/resources/ssl/client-key.pem"),
+	cert: fs.readFileSync("src/resources/ssl/client-cert.pem"),
+};
 
 http.createServer(app).listen(8080);
 https.createServer(options, app).listen(443);
