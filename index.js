@@ -57,6 +57,7 @@ var pesajes = [
 ];
 
 app.use(express.json());
+app.use(express.static("public"));
 
 app.get("/checkMatricula", (req, res) => {
 	if (checkMatricula.checkMatricula(req.query.matricula.toString()) == true) {
@@ -222,6 +223,21 @@ app.delete("/balanza/:id", (req, res) => {
 	res.json({ message: "Balanza deleted successfully" });
 });
 
-app.listen(port, () => {
-	console.log(`Server running on port ${port}`);
-});
+function updateBalanzasFile(balanzas) {
+	fs.writeFile("./data/balanzas.json", JSON.stringify(balanzas), err => {
+		if (err) {
+			console.error("Error writing balanzas.json:", err);
+		} else {
+			console.log("balanzas.json updated successfully");
+		}
+	});
+}
+
+const options = {
+	//	key: fs.readFileSync("src/resources/ssl/client-key.pem"),
+	//	cert: fs.readFileSync("src/resources/ssl/client-cert.pem"),
+};
+
+http.createServer(app).listen(8080);
+https.createServer(options, app).listen(443);
+// TEST

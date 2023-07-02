@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Balanzas</title>
+		<link
+			rel="stylesheet"
+			href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+		/>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				margin: 0;
+				padding: 20px;
+			}
+
+			h1 {
+				color: #333;
+			}
+
+			.form-group {
+				margin-bottom: 10px;
+			}
+
+			.result {
+				margin-top: 20px;
+			}
+
+			.popup {
+				position: fixed;
+				top: 50%;
+				left: 50%;
+				transform: translate(-50%, -50%);
+				background-color: #fff;
+				padding: 20px;
+				border: 1px solid #ccc;
+				box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+				z-index: 9999;
+			}
+
+			.popup-close {
+				position: absolute;
+				top: 10px;
+				right: 10px;
+				cursor: pointer;
+				color: #aaa;
+				font-size: 18px;
+			}
+
+			.popup-close:hover {
+				color: #333;
+			}
+
+			.popup-success {
+				border-color: #28a745;
+			}
+
+			.popup-success .popup-close {
+				color: #28a745;
+			}
+
+			.popup-error {
+				border-color: #dc3545;
+			}
+
+			.popup-error .popup-close {
+				color: #dc3545;
+			}
+
+			.popup-info {
+				border-color: #17a2b8;
+			}
+
+			.popup-info .popup-close {
+				color: #17a2b8;
+			}
+		</style>
+	</head>
+
+	<body>
+		<h1>Balanzas</h1>
+
+		<h2>Obtener balanzas</h2>
+		<button onclick="getBalanzas()" class="btn btn-primary">
+			Obtener balanzas
+		</button>
+		<div class="result" id="balanzasResult"></div>
+
+		<h2>Crear balanza</h2>
+		<div class="form-group">
+			<label for="direccionInput">Dirección:</label>
+			<input type="text" id="direccionInput" class="form-control" />
+		</div>
+		<button onclick="createBalanza()" class="btn btn-primary">
+			Crear balanza
+		</button>
+		<div class="result" id="createBalanzaResult"></div>
+
+		<h2>Actualizar balanza</h2>
+		<div class="form-group">
+			<label for="balanzaIdInput">ID de balanza:</label>
+			<input type="number" id="balanzaIdInput" class="form-control" />
+		</div>
+		<div class="form-group">
+			<label for="direccionUpdateInput">Nueva dirección:</label>
+			<input type="text" id="direccionUpdateInput" class="form-control" />
+		</div>
+		<button onclick="updateBalanza()" class="btn btn-primary">
+			Actualizar balanza
+		</button>
+		<div class="result" id="updateBalanzaResult"></div>
+
+		<h2>Eliminar balanza</h2>
+		<div class="form-group">
+			<label for="balanzaIdDeleteInput">ID de balanza:</label>
+			<input type="number" id="balanzaIdDeleteInput" class="form-control" />
+		</div>
+		<button onclick="deleteBalanza()" class="btn btn-primary">
+			Eliminar balanza
+		</button>
+		<div class="result" id="deleteBalanzaResult"></div>
+
+		<!-- Librería Axios para hacer solicitudes HTTP -->
+		<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+		<script src="https://kit.fontawesome.com/your-font-awesome-kit.js"></script>
+		<script>
+			// Función para mostrar los resultados en un elemento específico
+			function showResult(elementId, result) {
+				const resultDiv = document.getElementById(elementId);
+
+				if (Array.isArray(result)) {
+					const table = document.createElement("table");
+					table.classList.add("table", "table-striped");
+
+					// Encabezado de la tabla
+					const thead = document.createElement("thead");
+					const headerRow = document.createElement("tr");
+					const keys = Object.keys(result[0]);
+
+					keys.forEach(key => {
+						const th = document.createElement("th");
+						th.textContent = key;
+						headerRow.appendChild(th);
+					});
+
+					thead.appendChild(headerRow);
+					table.appendChild(thead);
+
+					// Cuerpo de la tabla
+					const tbody = document.createElement("tbody");
+
+					result.forEach(item => {
+						const row = document.createElement("tr");
+
+						keys.forEach(key => {
+							const td = document.createElement("td");
+							td.textContent = item[key];
+							row.appendChild(td);
+						});
+
+						tbody.appendChild(row);
+					});
+
+					table.appendChild(tbody);
+
+					resultDiv.innerHTML = "";
+					resultDiv.appendChild(table);
+				} else {
+					resultDiv.textContent = JSON.stringify(result);
+				}
+			}
+
+			// Función para mostrar un popup con el mensaje
+			function showPopup(message, type) {
+				const popup = document.createElement("div");
+				popup.classList.add("popup");
+				popup.classList.add(`popup-${type}`);
+
+				const closeBtn = document.createElement("span");
+				closeBtn.classList.add("popup-close");
+				closeBtn.innerHTML = "&#10006;";
+				closeBtn.addEventListener("click", () => {
+					popup.remove();
+				});
+
+				const messageText = document.createElement("p");
+				messageText.textContent = message;
+
+				const icon = document.createElement("i");
+				if (type === "success") {
+					icon.classList.add("fas", "fa-check-circle");
+				} else if (type === "error") {
+					icon.classList.add("fas", "fa-times-circle");
+				} else if (type === "info") {
+					icon.classList.add("fas", "fa-info-circle");
+				}
+
+				popup.appendChild(closeBtn);
+				popup.appendChild(icon);
+				popup.appendChild(messageText);
+
+				document.body.appendChild(popup);
+			}
+
+			// Función para hacer la solicitud GET al endpoint "/balanzas"
+			function getBalanzas() {
+				axios
+					.get("/balanzas", {
+						headers: {
+							token: "tokencargauy",
+						},
+					})
+					.then(response => {
+						showResult("balanzasResult", response.data);
+					})
+					.catch(error => {
+						console.error(error);
+					});
+			}
+
+			// Función para hacer la solicitud POST al endpoint "/balanza"
+			function createBalanza() {
+				const direccion = document.getElementById("direccionInput").value;
+
+				axios
+					.post(
+						"/balanza",
+						{ direccion },
+						{
+							headers: {
+								token: "tokencargauy",
+							},
+						}
+					)
+					.then(response => {
+						showResult("createBalanzaResult", response.data);
+						showPopup("Balanza creada exitosamente", "success");
+					})
+					.catch(error => {
+						console.error(error);
+					});
+			}
+
+			// Función para hacer la solicitud PUT al endpoint "/balanza/:id"
+			function updateBalanza() {
+				const balanzaId = document.getElementById("balanzaIdInput").value;
+				const nuevaDireccion = document.getElementById(
+					"direccionUpdateInput"
+				).value;
+
+				axios
+					.put(
+						`/balanza/${balanzaId}`,
+						{ direccion: nuevaDireccion },
+						{
+							headers: {
+								token: "tokencargauy",
+							},
+						}
+					)
+					.then(response => {
+						showResult("updateBalanzaResult", response.data);
+						showPopup("Balanza actualizada correctamente", "success");
+					})
+					.catch(error => {
+						console.error(error);
+					});
+			}
+
+			// Función para hacer la solicitud DELETE al endpoint "/balanza/:id"
+			function deleteBalanza() {
+				const balanzaId = document.getElementById("balanzaIdDeleteInput").value;
+
+				axios
+					.delete(`/balanza/${balanzaId}`, {
+						headers: {
+							token: "tokencargauy",
+						},
+					})
+					.then(response => {
+						showResult("deleteBalanzaResult", response.data);
+						showPopup("Balanza eliminada exitosamente", "error");
+					})
+					.catch(error => {
+						console.error(error);
+					});
+			}
+		</script>
+	</body>
+</html>
