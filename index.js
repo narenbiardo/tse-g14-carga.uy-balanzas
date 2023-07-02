@@ -77,7 +77,7 @@ app.get("/checkMatricula", (req, res) => {
 
 // Get pesajes for a specific vehicle between two dates
 app.get("/pesajesVehiculo", (req, res) => {
-	const { vehiculoId, fechaInicio, fechaFin } = req.body;
+	const { vehiculoId, fechaInicio, fechaFin } = req.query;
 	const token = req.headers["token"];
 
 	// Check if the token exists
