@@ -63,6 +63,7 @@ var pesajes = [
 ];
 
 app.use(express.json());
+app.use(express.static("public"));
 
 app.get("/checkMatricula", (req, res) => {
 	if (checkMatricula.checkMatricula(req.query.matricula.toString()) == true) {
