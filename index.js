@@ -102,6 +102,18 @@ app.get("/pesajesVehiculo", (req, res) => {
 		);
 	});
 
+	const existingPesaje = pesajes.some(pesaje => {
+		return (
+			pesaje.vehiculoId === vehiculoId &&
+			pesaje.fecha >= parsedFechaInicio &&
+			pesaje.fecha <= parsedFechaFin
+		);
+	});
+
+	if (existingPesaje) {
+		return res.json(filteredPesajes);
+	}
+
 	const randomNumber = Math.floor(Math.random() * 101); // Generates a random int between 0 and 100
 
 	// Generate random pesajes for the vehicle within the specified date range
@@ -118,7 +130,9 @@ app.get("/pesajesVehiculo", (req, res) => {
 			peso: randomPeso,
 		};
 
-		pesajes.push(newPesaje);
+		if (!existingPesaje) {
+			pesajes.push(newPesaje);
+		}
 		filteredPesajes.push(newPesaje);
 	}
 
