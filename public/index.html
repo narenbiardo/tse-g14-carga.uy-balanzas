@@ -121,6 +121,24 @@
 		</button>
 		<div class="result" id="deleteBalanzaResult"></div>
 
+		<h2>Obtener pesajes de vehículo</h2>
+		<div class="form-group">
+			<label for="vehiculoIdInput">ID de vehículo:</label>
+			<input type="text" id="vehiculoIdInput" class="form-control" />
+		</div>
+		<div class="form-group">
+			<label for="fechaInicioInput">Fecha de inicio:</label>
+			<input type="date" id="fechaInicioInput" class="form-control" />
+		</div>
+		<div class="form-group">
+			<label for="fechaFinInput">Fecha de fin:</label>
+			<input type="date" id="fechaFinInput" class="form-control" />
+		</div>
+		<button onclick="getPesajesVehiculo()" class="btn btn-primary">
+			Obtener pesajes de vehículo
+		</button>
+		<div class="result" id="pesajesVehiculoResult"></div>
+
 		<!-- Librería Axios para hacer solicitudes HTTP -->
 		<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 		<script src="https://kit.fontawesome.com/your-font-awesome-kit.js"></script>
@@ -281,6 +299,34 @@
 					.then(response => {
 						showResult("deleteBalanzaResult", response.data);
 						showPopup("Balanza eliminada exitosamente", "error");
+					})
+					.catch(error => {
+						console.error(error);
+					});
+			}
+
+			function getPesajesVehiculo() {
+				const vehiculoId = document.getElementById("vehiculoIdInput").value;
+				const fechaInicio = document.getElementById("fechaInicioInput").value;
+				const fechaFin = document.getElementById("fechaFinInput").value;
+
+				axios
+					.get("/pesajesVehiculo", {
+						headers: {
+							token: "tokencargauy",
+						},
+						params: {
+							vehiculoId: vehiculoId,
+							fechaInicio: fechaInicio,
+							fechaFin: fechaFin,
+						},
+					})
+					.then(response => {
+						const pesajes = response.data.map(pesaje => {
+							const fecha = new Date(pesaje.fecha).toLocaleString();
+							return { ...pesaje, fecha: fecha };
+						});
+						showResult("pesajesVehiculoResult", pesajes);
 					})
 					.catch(error => {
 						console.error(error);
