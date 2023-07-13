@@ -37,7 +37,7 @@ resource "google_compute_firewall" "nodejs-server" {
 
   allow {
     protocol = "tcp"
-    ports    = ["443"]
+    ports    = ["8080","443"]
   }
 
   source_ranges = ["0.0.0.0/0"]
